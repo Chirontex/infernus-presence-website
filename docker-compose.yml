@@ -1,0 +1,120 @@
+version: '3.9'
+
+services:
+  # MariaDB Database Service
+  database:
+    image: mariadb:12
+    container_name: infernus-database
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MARIADB_DATABASE: ${DB_NAME:-infernus_db}
+      MARIADB_USER: ${DB_USER:-infernus_user}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-infernus_password}
+      MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 'no'
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - database_data:/var/lib/mysql
+    networks:
+      - infernus-network
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--su=mysql", "--connect", "--innodb_initialized" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # PHP-FPM Backend Service (Symfony 8)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile
+      args:
+        - PHP_VERSION=8.4
+    container_name: infernus-backend
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DEBUG: ${APP_DEBUG:-1}
+      APP_SECRET: ${APP_SECRET:-ChangeMe!}
+      DATABASE_URL: mysql://${DB_USER:-infernus_user}:${DB_PASSWORD:-infernus_password}@database:3306/${DB_NAME:-infernus_db}?serverVersion=12.0&charset=utf8mb4
+      CORS_ALLOW_ORIGIN: ^https?://(${FRONTEND_HOST:-localhost}|${FRONTEND_HOST:-127.0.0.1})(:[0-9]+)?$
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./backend/var:/app/var
+      - ./backend/public/uploads:/app/public/uploads
+    working_dir: /app
+    networks:
+      - infernus-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # Node.js Frontend Service (Nuxt 4)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: docker/Dockerfile
+      args:
+        - NODE_VERSION=18
+    container_name: infernus-frontend
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-http://infernus-presence.local/api}
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.nuxt
+    working_dir: /app
+    networks:
+      - infernus-network
+    restart: unless-stopped
+    # Development mode with hot reload
+    command: npm run dev
+
+  # nginx Web Server and Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: infernus-nginx
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./backend/public:/app/public:ro
+      - ./frontend/public:/app/frontend/public:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - infernus-network
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  database_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  infernus-network:
+    driver: bridge

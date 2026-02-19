@@ -1,0 +1,88 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.php
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.sublime-project
+.sublime-workspace
+*.sublime-project
+*.sublime-workspace
+
+# Backend (PHP/Symfony)
+backend/var/
+backend/vendor/
+backend/public/uploads/
+backend/.php-cs-fixer.cache
+backend/symfony.lock
+backend/composer.lock.docker
+backend/.env.local
+backend/.env.*.local
+backend/coverage/
+backend/phpunit.xml
+
+# Frontend (Node.js/Nuxt)
+frontend/node_modules/
+frontend/.nuxt/
+frontend/.output/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+frontend/coverage/
+frontend/.vuerc
+frontend/npm-debug.log
+frontend/yarn-error.log
+frontend/.nitro/
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Database
+database_data/
+*.sql
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+access.log
+error.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Build artifacts
+build/
+dist/
+.cache/
+
+# Testing
+coverage/
+.nyc_output/
+htmlcov/
+
+# SSL Certificates (for development only, add when needed)
+# nginx/ssl/*.crt
+# nginx/ssl/*.key
+
+# Package manager lock files (optional - include for reproducible builds)
+# Uncomment to ignore:
+# frontend/package-lock.json
+# backend/composer.lock
