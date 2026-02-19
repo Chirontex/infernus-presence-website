@@ -76,12 +76,14 @@ make help
 
 #### 1. Backend (PHP-FPM 8.4 + Symfony 8)
 - **Образ**: PHP 8.4-FPM Alpine
-- **Порт**: 9000 (доступен через nginx)
+- **Внутренний порт**: 9000 (доступен через nginx)
+- **Зависимости**: БД (database должен быть в статусе healthy)
 - **Ключевые компоненты:**
   - Symfony 8 фреймворк для REST API
   - Doctrine ORM для работы с БД
   - OPcache для оптимизации производительности
   - Расширения: GD, PDO MySQL, Intl
+- **Health Check**: Проверка доступности через curl на `/ping`
 
 **Что находится в контейнере:**
 - REST API для получения информации о группе и приема подписок
@@ -132,6 +134,7 @@ docker compose exec frontend npm run preview
 #### 4. nginx (Reverse Proxy)
 - **Образ**: nginx Alpine
 - **Порты**: 80 (HTTP), 443 (HTTPS)
+- **Зависимости**: backend и frontend должны быть запущены
 - **Функции:**
   - Маршрутизация запросов к backend и frontend
   - Rate limiting для API
@@ -139,6 +142,8 @@ docker compose exec frontend npm run preview
   - Безопасность заголовков
   - Кэширование статических файлов
   - WebSocket поддержка
+- **Health Check**: Проверка доступности через wget на `/health`
+- **Логирование**: Сохранение логов в volume `nginx_logs`
 
 **Маршруты:**
 - `/api/*` → Symfony backend
@@ -393,7 +398,6 @@ docker compose exec database mariadb -u infernus_user -p
    - [ ] Оптимизируй OPcache настройки
    - [ ] Настрой CDN для статических файлов
    - [ ] Добавь индексы на часто запрашиваемые поля БД
-   - [ ] Рассмотри Redis для кэширования
 
 3. **Данные:**
    - [ ] Настрой регулярные бэкапы БД
@@ -410,7 +414,6 @@ docker compose exec database mariadb -u infernus_user -p
 
 **Backend:**
 - Множество PHP-FPM контейнеров за nginx load balancer
-- Redis для кэширования данных о группе
 - Database оптимизация через индексы и пагинацию
 - Rate limiting для API защиты
 
@@ -515,6 +518,7 @@ DB_PORT=3307
 - Система комментариев/отзывов
 - Интеграция с музыкальными платформами (Spotify, Apple Music)
 - Многоязычная поддержка
+- **Система кэширования (Redis)** — внедрение Redis для оптимизации производительности при кэшировании данных о группе и часто запрашиваемых API endpoints, что улучшит отзывчивость системы при масштабировании
 
 ## Дополнительные ресурсы
 
