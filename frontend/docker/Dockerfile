@@ -5,18 +5,6 @@ ARG NODE_VERSION=18
 
 WORKDIR /app
 
-# Install dependencies
-RUN npm install -g npm@latest
-
-# Create non-root user
-RUN addgroup -g 1000 node && adduser -D -u 1000 -G node node
-
-# Fix permissions for /app
-RUN chown -R node:node /app
-
-# Switch to node user
-USER node
-
 # Expose port
 EXPOSE 3000
 

@@ -5,9 +5,6 @@ ARG PHP_VERSION=8.4
 # Install system and build dependencies
 RUN apk add --no-cache \
     mysql-client \
-    libpng \
-    libjpeg-turbo \
-    libfreetype6 \
     curl \
     git \
     zip \
@@ -15,7 +12,8 @@ RUN apk add --no-cache \
     && apk add --no-cache --virtual .build-deps \
         libpng-dev \
         libjpeg-turbo-dev \
-        libfreetype6-dev \
+        freetype-dev \
+        icu-dev \
     && docker-php-ext-configure gd \
         --with-freetype \
         --with-jpeg \
