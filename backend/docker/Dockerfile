@@ -1,55 +1,21 @@
-# Build stage
-FROM php:8.4-fpm-alpine AS builder
-
-ARG PHP_VERSION=8.4
-
-# Install system dependencies
-RUN apk add --no-cache \
-    git \
-    curl \
-    libpng-dev \
-    libjpeg-turbo-dev \
-    libfreetype6-dev \
-    zip \
-    unzip \
-    && docker-php-ext-configure gd \
-        --with-freetype \
-        --with-jpeg \
-    && docker-php-ext-install -j$(nproc) \
-        gd \
-        pdo \
-        pdo_mysql \
-        opcache \
-        intl
-
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Set working directory
-WORKDIR /app
-
-# Copy composer files
-COPY composer.json composer.lock ./
-
-# Install PHP dependencies
-RUN composer install \
-    --no-interaction \
-    --no-dev \
-    --optimize-autoloader \
-    --prefer-dist
-
-# Production stage
 FROM php:8.4-fpm-alpine
 
 ARG PHP_VERSION=8.4
 
-# Install runtime dependencies
+# Install system and build dependencies
 RUN apk add --no-cache \
     mysql-client \
     libpng \
     libjpeg-turbo \
     libfreetype6 \
     curl \
+    git \
+    zip \
+    unzip \
+    && apk add --no-cache --virtual .build-deps \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        libfreetype6-dev \
     && docker-php-ext-configure gd \
         --with-freetype \
         --with-jpeg \
@@ -58,7 +24,11 @@ RUN apk add --no-cache \
         pdo \
         pdo_mysql \
         opcache \
-        intl
+        intl \
+    && apk del .build-deps
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Configure PHP
 COPY docker/php.ini /usr/local/etc/php/conf.d/app.ini
@@ -70,14 +40,8 @@ RUN addgroup -g 1000 app && adduser -D -u 1000 -G app app
 # Set working directory
 WORKDIR /app
 
-# Copy application code
-COPY . .
-
-# Copy vendor from builder
-COPY --from=builder /app/vendor /app/vendor
-
-# Fix permissions
-RUN chown -R app:app /app
+# Create vendor directory with proper permissions
+RUN mkdir -p /app/vendor && chown -R app:app /app
 
 # Switch to app user
 USER app

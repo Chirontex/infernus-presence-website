@@ -35,13 +35,19 @@
    make up
    ```
 
-4. **Установи зависимости:**
+4. **Установи зависимости (опционально):**
    ```bash
+   # Backend: установка PHP зависимостей (требуется для production)
    docker compose exec backend composer install
+   
+   # Frontend: установка Node.js зависимостей
    docker compose exec frontend npm install
-   # или:
+   
+   # или через Makefile:
    make install
    ```
+   
+   > **Примечание:** Backend контейнер запустится и будет готов к работе даже без предварительного выполнения `composer install`. Зависимости можно установить в любой момент после запуска контейнера.
 
 5. **Доступ к приложению:**
    - **Frontend (сайт):** http://infernus-presence.local
@@ -84,12 +90,20 @@ make help
   - OPcache для оптимизации производительности
   - Расширения: GD, PDO MySQL, Intl
 - **Health Check**: Проверка доступности через curl на `/ping`
+- **Код приложения**: Пробрасывается через volume — контейнер всегда работает с актуальным кодом
+- **Composer зависимости**: Устанавливаются внутри контейнера через `docker compose exec backend composer install`
 
 **Что находится в контейнере:**
 - REST API для получения информации о группе и приема подписок
 - Административная панель для управления контентом
 - Система аутентификации для защиты админпанели
 - Валидация и обработка данных
+
+**Архитектура разработки:**
+- Весь код источника пробрасывается через volume `./backend:/app`
+- Директория `vendor` создается в контейнере при выполнении `composer install`
+- Изменения кода в реальном времени отражаются в контейнере без перезагрузки
+- Файлы `composer.json` и `composer.lock` пробрасываются вместе с кодом
 
 #### 2. Database (MariaDB 12)
 - **Образ**: MariaDB 12 Alpine
@@ -152,16 +166,22 @@ docker compose exec frontend npm run preview
 - `/*` → Nuxt frontend
 
 ### Backend
-
 - **Язык**: PHP 8.4 — современная версия с улучшенной типизацией и производительностью
 - **Фреймворк**: Symfony 8 — надежный, масштабируемый фреймворк с рядом встроенных инструментов
 - **База данных**: MariaDB 12 — открытая реляционная БД, совместимая с MySQL
+- **Архитектура**: Code-sharing через Docker volume для разработки в реальном времени
 
 **Компоненты backend'а:**
 - REST API для получения информации о группе и приема email-адресов подписчиков
 - Административная панель (веб-интерфейс) для управления контентом
 - Система аутентификации для защиты админпанели
 - Валидация и обработка данных на уровне приложения
+
+**Модель разработки:**
+- Весь исходный код находится на хост-машине и пробрасывается в контейнер через volume
+- Это обеспечивает актуальность кода без необходимости пересборки образа
+- Удобство разработки: код редактируется локально с любимым IDE/редактором
+- При запуске контейнера не требуется наличие `composer.json` и `composer.lock` в образе
 
 ### Frontend
 
@@ -190,7 +210,9 @@ infernus-presence-website/
 │   ├── migrations/               # Doctrine миграции базы данных
 │   ├── tests/                    # Юнит и интеграционные тесты
 │   ├── config/                   # Конфигурация Symfony
+│   ├── vendor/                   # PHP зависимости (создается в контейнере)
 │   ├── composer.json             # PHP зависимости
+│   ├── composer.lock             # Lock файл зависимостей
 │   └── docker/                   # Dockerfile и конфиги для контейнера
 │
 ├── frontend/                     # Frontend приложение (Nuxt 4 + Vue 3)
@@ -369,10 +391,11 @@ docker compose down        # Остановить
 docker compose ps          # Статус
 docker compose logs -f [service]  # Логи
 
-# Backend
-docker compose exec backend composer install
-docker compose exec backend php bin/console [command]
-docker compose exec backend php bin/phpunit
+# Backend — установка зависимостей и команды
+docker compose exec backend composer install      # Установить PHP зависимости
+docker compose exec backend composer update       # Обновить зависимости
+docker compose exec backend php bin/console [command]  # Symfony команды
+docker compose exec backend php bin/phpunit       # Запустить тесты
 
 # Frontend
 docker compose exec frontend npm install
@@ -382,6 +405,18 @@ docker compose exec frontend npm run build
 # Database
 docker compose exec database mariadb -u infernus_user -p
 ```
+
+### Важно о работе с контейнерами
+
+**Backend контейнер:**
+- Запускается без необходимости предварительной установки зависимостей через `composer install`
+- Все файлы вашего приложения пробрасываются через volume, поэтому контейнер видит актуальный код
+- Зависимости устанавливаются внутри контейнера по мере необходимости: `docker compose exec backend composer install`
+- При удалении контейнера директория `vendor` может быть очищена — это нормально, переустановите зависимости
+
+**Frontend контейнер:**
+- Аналогично backend, код пробрасывается через volume
+- Установите зависимости после запуска: `docker compose exec frontend npm install`
 
 ## Production развёртывание
 
