@@ -39,6 +39,9 @@ COPY docker/www.conf /usr/local/etc/php-fpm.d/www.conf
 # Create app user
 RUN addgroup -g 1000 app && adduser -D -u 1000 -G app app
 
+# Create runtime directories with proper permissions
+RUN mkdir -p /run && chown app:app /run && chmod 755 /run
+
 # Set working directory
 WORKDIR /app
 

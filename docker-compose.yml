@@ -24,7 +24,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # PHP-FPM Backend Service (Symfony 8)
+  # PHP-FPM Backend Service (Symfony)
   backend:
     build:
       context: ./backend
@@ -42,14 +42,13 @@ services:
       database:
         condition: service_healthy
     volumes:
-      - ./backend:/app
-      - ./backend/var:/app/var
-      - ./backend/public/uploads:/app/public/uploads
+      - ./backend/app:/app
+      - ./runtime/php-fpm:/run
     working_dir: /app
     networks:
       - infernus-network
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9000/ping" ]
+      test: [ "CMD", "test", "-S", "/run/php-fpm.sock" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -57,30 +56,30 @@ services:
     restart: unless-stopped
 
   # Node.js Frontend Service (Nuxt 4)
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: docker/Dockerfile
-      args:
-        - NODE_VERSION=18
-    container_name: infernus-frontend
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE}
-    depends_on:
-      - backend
-    ports:
-      - "${FRONTEND_PORT}:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.nuxt
-    working_dir: /app
-    networks:
-      - infernus-network
-    restart: unless-stopped
-    # Development mode with hot reload
-    command: npm run dev
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: docker/Dockerfile
+  #     args:
+  #       - NODE_VERSION=18
+  #   container_name: infernus-frontend
+  #   environment:
+  #     NODE_ENV: ${NODE_ENV}
+  #     NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE}
+  #   depends_on:
+  #     - backend
+  #   ports:
+  #     - "${FRONTEND_PORT}:3000"
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #     - /app/.nuxt
+  #   working_dir: /app
+  #   networks:
+  #     - infernus-network
+  #   restart: unless-stopped
+  #   # Development mode with hot reload
+  #   command: npm run dev
 
   # nginx Web Server and Reverse Proxy
   nginx:
@@ -88,7 +87,7 @@ services:
     container_name: infernus-nginx
     depends_on:
       - backend
-      - frontend
+    #  - frontend
     ports:
       - "${HTTP_PORT}:80"
       - "${HTTPS_PORT}:443"
@@ -96,9 +95,10 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
-      - ./backend/public:/app/public:ro
-      - ./frontend/public:/app/frontend/public:ro
+      - ./backend/app/public:/app/public:ro
+    #  - ./frontend/public:/app/frontend/public:ro
       - nginx_logs:/var/log/nginx
+      - ./runtime/php-fpm:/run:ro
     networks:
       - infernus-network
     healthcheck:
