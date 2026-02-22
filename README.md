@@ -23,9 +23,10 @@
    127.0.0.1  infernus-presence.local
    ```
 
-2. **Скопируй конфигурацию окружения:**
+2. **Создай конфигурацию окружения:**
    ```bash
-   cp .env.example .env
+   # Создай .env в backend/app на основе примера
+   cp backend/app/.env.example backend/app/.env
    ```
 
 3. **Запусти все сервисы:**
@@ -225,22 +226,31 @@ docker compose exec frontend npm run preview
 
 ```
 infernus-presence-website/
-├── backend/                      # Backend приложение (Symfony 8 + PHP 8.4)
-│   ├── src/
-│   │   ├── Controller/           # API контроллеры и админпанель
-│   │   ├── Entity/               # Doctrine сущности (Band, Subscriber)
-│   │   ├── Repository/           # Репозитории для работы с БД
-│   │   ├── Service/              # Бизнес-логика
-│   │   ├── Form/                 # Формы для админпанели
-│   │   └── Kernel.php
-│   ├── templates/                # Шаблоны Twig для админпанели
-│   ├── migrations/               # Doctrine миграции базы данных
-│   ├── tests/                    # Юнит и интеграционные тесты
-│   ├── config/                   # Конфигурация Symfony
-│   ├── vendor/                   # PHP зависимости (создается в контейнере)
-│   ├── composer.json             # PHP зависимости
-│   ├── composer.lock             # Lock файл зависимостей
-│   └── docker/                   # Dockerfile и конфиги для контейнера
+├── backend/                      # Контейнер backend (PHP 8.4 + Symfony 8)
+│   ├── app/                      # Symfony приложение
+│   │   ├── src/
+│   │   │   ├── Controller/       # API контроллеры и админпанель
+│   │   │   ├── Entity/           # Doctrine сущности (Band, Subscriber)
+│   │   │   ├── Repository/       # Репозитории для работы с БД
+│   │   │   ├── Service/          # Бизнес-логика
+│   │   │   ├── Form/             # Формы для админпанели
+│   │   │   └── Kernel.php
+│   │   ├── templates/            # Шаблоны Twig для админпанели
+│   │   ├── migrations/           # Doctrine миграции базы данных
+│   │   ├── tests/                # Юнит и интеграционные тесты
+│   │   ├── config/               # Конфигурация Symfony
+│   │   ├── vendor/               # PHP зависимости (создается в контейнере)
+│   │   ├── public/               # Веб-корень (index.php)
+│   │   ├── .env                  # Переменные окружения (создается из .env.example)
+│   │   ├── .env.example          # Пример переменных окружения
+│   │   ├── composer.json         # PHP зависимости
+│   │   ├── composer.lock         # Lock файл зависимостей
+│   │   └── phpunit.dist.xml      # Конфигурация PHPUnit
+│   ├── docker/                   # Dockerfile и конфиги для контейнера
+│   │   ├── Dockerfile
+│   │   ├── php.ini
+│   │   └── www.conf
+│   └── ...
 │
 ├── frontend/                     # Frontend приложение (Nuxt 4 + Vue 3)
 │   ├── app.vue                   # Корневой компонент
@@ -262,12 +272,30 @@ infernus-presence-website/
 ├── docker-compose.yml            # Конфигурация Docker Compose
 ├── nginx/                        # Конфигурация nginx
 │   ├── nginx.conf                # Основная конфигурация
+│   ├── ssl/                      # SSL сертификаты
 │   └── conf.d/
 │       └── default.conf          # Маршрутизация запросов
 │
+├── runtime/                      # Runtime данные (логи, сокеты)
+│   └── php-fpm/
+│       └── php-fpm.sock
+│
 ├── Makefile                      # Удобные команды для управления
-├── .env.example                  # Пример переменных окружения
+├── .env → backend/app/.env       # Симлинк на .env приложения
 └── .gitignore                    # Git конфигурация
+```
+
+### Управление переменными окружения
+
+Файл `.env` должен находиться в `backend/app/` — именно там его использует Symfony приложение. В корне проекта создается символический симлинк на этот файл для удобства доступа:
+
+```bash
+# Первоначальная подготовка:
+cp backend/app/.env.example backend/app/.env  # Создай .env в приложении
+
+# Далее можно редактировать файл через обе пути:
+nano .env                      # Через симлинк в корне
+nano backend/app/.env          # Или напрямую в приложении
 ```
 
 ## Функциональные требования
@@ -365,10 +393,19 @@ API использует версионирование через URL path дл
 
 ### Переменные окружения
 
-Создай файл `.env` на основе `.env.example`. Все переменные подробно задокументированы в `.env.example` с описанием их назначения и значений.
+Файл конфигурации `.env` находится в `backend/app/.env`. Создай его на основе `backend/app/.env.example`. В корне проекта используется символический симлинк `.env → backend/app/.env` для удобства доступа.
+
+**Структура:**
+```bash
+backend/app/.env.example  # Исходный шаблон с документацией и примерами
+backend/app/.env          # Реальный файл конфигурации (создается один раз)
+.env                      # Симлинк в корне проекта → backend/app/.env
+```
+
+**Все переменные подробно задокументированы в `backend/app/.env.example`** с описанием их назначения и значений.
 
 **Важно для production:**
-- Никогда не коммитай `.env` в Git
+- Никогда не коммитай `backend/app/.env` или `.env` в Git (они в `.gitignore`)
 - Измени все пароли на сильные значения
 - Установи `APP_DEBUG=0` и `APP_ENV=prod`
 - Настрой HTTPS с SSL сертификатами
@@ -595,4 +632,4 @@ DB_PORT=3307
 
 **Дата последнего обновления:** Февраль 2026
 
-**Версия:** 1.0
+**Версия:** 0.1
