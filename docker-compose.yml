@@ -29,8 +29,6 @@ services:
     build:
       context: ./backend
       dockerfile: docker/Dockerfile
-      args:
-        - PHP_VERSION=8.4
     container_name: infernus-backend
     environment:
       APP_ENV: ${APP_ENV}

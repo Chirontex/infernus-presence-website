@@ -1,6 +1,4 @@
-FROM php:8.4-fpm-alpine
-
-ARG PHP_VERSION=8.4
+FROM php:8.5-fpm-alpine
 
 # Install system and build dependencies
 RUN apk add --no-cache \
@@ -25,7 +23,6 @@ RUN apk add --no-cache \
         gd \
         pdo \
         pdo_mysql \
-        opcache \
         intl \
     && apk del .build-deps
 
